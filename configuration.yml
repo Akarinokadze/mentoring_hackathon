@@ -4,5 +4,5 @@ link_parsing:
     'data analyst', 'web developer', 'QA engineer', 'test engineer', 'devops'
 ]
     titles: [
-    '', 'middle', 'senior', 'lead'
+    'lead', 'senior', 'middle'
 ]

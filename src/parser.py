@@ -56,7 +56,7 @@ def log_in() -> None:
         return None
     except:
         driver.get("https://linkedin.com/uas/login")
-        time.sleep(get_time(10))
+        time.sleep(get_time(15))
         username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
         username.send_keys(USER_LOGIN)
         time.sleep(get_time(5))
@@ -131,5 +131,5 @@ def parse_links(page_num: int = 1, path: str = Path(r'..\data\raw\data_frame.csv
 if __name__ == '__main__':
     session_init()
     log_in()
-    parse_links(page_num=99)
+    parse_links(page_num=19)
     input()
