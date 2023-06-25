@@ -1,200 +1,135 @@
-
-from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.support.wait import WebDriverWait
 
 import time
-import re
+import random
+import csv
+import os.path
+import yaml
 
-USER_LOGIN = '<YOUR LOGIN>'
-USER_PASSWORD = '<YOUR_PASSWORD>'
+from pathlib import Path
+from tqdm import tqdm
 
-
-def get_and_print_profile_info(driver, profile_url):
-    driver.get(profile_url)        # this will open the link
-
-    # Extracting data from page with BeautifulSoup
-    src = driver.page_source
-
-    # Now using beautiful soup
-    soup = BeautifulSoup(src, 'lxml')
-
-    # Extracting the HTML of the complete introduction box
-    # that contains the name, company name, and the location
-    intro = soup.find('div', {'class': 'pv-text-details__left-panel'})
-
-    #print(intro)
-
-    # In case of an error, try changing the tags used here.
-    name_loc = intro.find("h1")
-
-    # Extracting the Name
-    name = name_loc.get_text().strip()
-    # strip() is used to remove any extra blank spaces
-
-    works_at_loc = intro.find("div", {'class': 'text-body-medium'})
-
-    # this gives us the HTML of the tag in which the Company Name is present
-    # Extracting the Company Name
-    works_at = works_at_loc.get_text().strip()
-
-    print("Name -->",  name,
-          "\nWorks At -->", works_at)
-
-    POSTS_URL_SUFFIX = 'recent-activity/all/'
-
-    time.sleep(0.5)
-
-    # Get current url from browser
-    cur_profile_url = driver.current_url
-    print(cur_profile_url)
-
-    # Parse posts
-    get_and_print_user_posts(driver, cur_profile_url + POSTS_URL_SUFFIX)
+creds = yaml.safe_load(Path(r'../credentials.yml').read_text())
+USER_LOGIN = creds['user']['USER_LOGIN']
+USER_PASSWORD = creds['user']['USER_PASSWORD']
+SCROLL_PAUSE_TIME = 0.5
+confs = yaml.safe_load(Path(r'../configuration.yml').read_text())
+KEYWORDS = []
+for title in confs['link_parsing']['titles']:
+    for prof in confs['link_parsing']['profs']:
+        KEYWORDS.append((title + ' ' + prof).strip().replace(' ', '%20'))
 
 
-def get_and_print_user_posts(driver, posts_url):
-    driver.get(posts_url)
+def get_time(base: int) -> int:
+    """
+    Returns randomized time shift, sometimes multiply shift by base.
+    """
+    factor = random.randint(1, 20)
+    if factor == 1:
+        result = base + base * random.randint(1, 10)
+    else:
+        result = base + random.randint(1, 10)
+    return result
 
-    #Simulate scrolling to capture all posts
-    SCROLL_PAUSE_TIME = 1.5
 
-    # Get scroll height
+def session_init() -> None:
+    """
+    Initialize session.
+    """
+    caps = DesiredCapabilities().CHROME
+    caps['pageLoadStrategy'] = 'eager'
+    # noinspection PyGlobalUndefined
+    global driver
+    driver = webdriver.Chrome()
+
+
+# noinspection PyBroadException
+def log_in() -> None:
+    """
+    Login in.
+    """
+    try:
+        driver.find_element(By.CLASS_NAME, 'global-nav__me-photo')
+        return None
+    except:
+        driver.get("https://linkedin.com/uas/login")
+        time.sleep(get_time(10))
+        username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
+        username.send_keys(USER_LOGIN)
+        time.sleep(get_time(5))
+        pword = driver.find_element(By.ID, "password")
+        pword.send_keys(USER_PASSWORD)
+        time.sleep(get_time(5))
+        driver.find_element(By.XPATH, "//button[@type='submit']").click()
+        time.sleep(get_time(5))
+
+
+def csv_write(data: list, path: str, header=None) -> None:
+    """
+    Write new line to csv file, if file doesn't exist - creates one with header.
+    """
+    if header is None:
+        header = ['account_link', 'search_keywords']
+    if not os.path.isfile(path):
+        with open(path, 'a', encoding='UTF8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(header)
+    with open(path, 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+
+
+def scroll_page() -> None:
+    """
+    Scroll down till end of the page to make sure there is "Next" button.
+    """
     last_height = driver.execute_script("return document.body.scrollHeight")
-
-    # We can adjust this number to get more posts
-    NUM_SCROLLS = 5
-
-    for i in range(NUM_SCROLLS):
-        # Scroll down to bottom
+    while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-        # Wait to load page
         time.sleep(SCROLL_PAUSE_TIME)
-
-        # Calculate new scroll height and compare with last scroll height
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
         last_height = new_height
 
-    # Parsing posts
-    src = driver.page_source
 
-    # Now using beautiful soup
-    soup = BeautifulSoup(src, 'lxml')
-    # soup.prettify()
-
-    posts = soup.find_all('li', class_='profile-creator-shared-feed-update__container')
-    # print(posts)
-
-    print(f'Number of posts: {len(posts)}')
-    for post_src in posts:
-        post_text_div = post_src.find('div', {'class': 'feed-shared-update-v2__description-wrapper mr2'})
-
-        # if post_text_div is None:
-        #     print(post_src)
-
-        if post_text_div is not None:
-            post_text = post_text_div.find('span', {'dir': 'ltr'})
-        else:
-            post_text = None
-
-        # If post text is found
-        if post_text is not None:
-            post_text = post_text.get_text().strip()
-            print(f'Post text: {post_text}')
-
-        reaction_cnt = post_src.find('span', {'class': 'social-details-social-counts__reactions-count'})
-
-        # If number of reactions is written as text
-        # It has different class name
-        if reaction_cnt is None:
-            reaction_cnt = post_src.find('span', {'class': 'social-details-social-counts__social-proof-text'})
-
-        if reaction_cnt is not None:
-            reaction_cnt = reaction_cnt.get_text().strip()
-            print(f'Reactions: {reaction_cnt}')
-
-    return
-
-
+# noinspection PyBroadException
+def parse_links(page_num: int = 1, path: str = Path(r'..\data\raw\data_frame.csv'), keywords=None) -> None:
+    """
+    Search for keywords, navigate through pages and save links to path file.
+    """
+    if keywords is None:
+        keywords = KEYWORDS
+    for keyword in tqdm(keywords, desc='Keywords: '):
+        driver.get(
+            'https://www.linkedin.com/search/results/people/?keywords='
+            + keyword
+            + '=GLOBAL_SEARCH_HEADER&sid=QDs'
+        )
+        for _ in tqdm(range(page_num), desc='Pages: '):
+            search_result_links = driver.find_elements(By.CSS_SELECTOR, "div.entity-result__item a.app-aware-link")
+            for link in search_result_links:
+                href = link.get_attribute("href")
+                if 'linkedin.com/in' in href:
+                    string = [href[:href.rfind('?miniProfileUrn')], keyword.replace('%20', ' ')]
+                    csv_write(string, path)
+            scroll_page()
+            try:
+                next_button = WebDriverWait(driver, timeout=30).until(
+                    lambda d: d.find_element(By.CLASS_NAME, 'artdeco-pagination__button--next')
+                )
+                next_button.click()
+                time.sleep(get_time(5))
+            except:
+                break
+    driver.quit()
 
 
 if __name__ == '__main__':
-    # start Chrome browser
-    caps = DesiredCapabilities().CHROME
-
-    caps['pageLoadStrategy'] = 'eager'
-
-    driver = webdriver.Chrome()
-
-    # Opening linkedIn's login page
-    # NOTE: We need to turn of 2 step authentification
-    driver.get("https://linkedin.com/uas/login")
-
-    # waiting for the page to load
-    time.sleep(3.5)
-
-    # entering username
-    username = driver.find_element(By.ID, "username")
-
-    # In case of an error, try changing the element
-    # tag used here.
-
-    # Enter Your Email Address
-    username.send_keys(USER_LOGIN)
-
-    # entering password
-    pword = driver.find_element(By.ID, "password")
-    # In case of an error, try changing the element
-    # tag used here.
-
-    # Enter Your Password
-    pword.send_keys(USER_PASSWORD)
-
-    # Clicking on the log in button
-    # Format (syntax) of writing XPath -->
-    # //tagname[@attribute='value']
-    driver.find_element(By.XPATH, "//button[@type='submit']").click()
-
-    ### TEST for parsing page with posts
-    # get_and_print_profile_info(driver, 'https://www.linkedin.com/in/mathurin-ache-11004218')
-
-    # exit()
-
-    # Open search page
-    driver.get('https://www.linkedin.com/search/results/people/?keywords=data%20scientist&origin=CLUSTER_EXPANSION&sid=1gy')
-
-    profile_urls = []
-
-    NUM_PAGES_TO_PARSE = 12
-
-    # Iterate over pages of search results
-    # to collect profile urls
-    for i in range(NUM_PAGES_TO_PARSE):
-        search_result_links = driver.find_elements(By.CSS_SELECTOR, "div.entity-result__item a.app-aware-link")
-
-        for link in search_result_links:
-            href = link.get_attribute("href")
-            if 'linkedin.com/in' in href:
-                profile_urls.append(href)
-
-        next_button = driver.find_element(By.CLASS_NAME,'artdeco-pagination__button--next')
-        next_button.click()
-        time.sleep(2)
-
-
-    profile_urls = list(set(profile_urls))
-
-    print(profile_urls)
-
-    # Parse profile urls
-    for profile_url in profile_urls:
-        get_and_print_profile_info(driver, profile_url)
-        time.sleep(2)
-
-    # close the Chrome browser
-    driver.quit()
+    session_init()
+    log_in()
+    parse_links(page_num=99)
+    input()

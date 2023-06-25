@@ -1,0 +1,8 @@
+link_parsing:
+    profs: [
+    'frontend', 'backend', 'data scientist', 'ML engineer',
+    'data analyst', 'web developer', 'QA engineer', 'test engineer', 'devops'
+]
+    titles: [
+    '', 'middle', 'senior', 'lead'
+]
