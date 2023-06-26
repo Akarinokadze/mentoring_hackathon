@@ -21,6 +21,7 @@ KEYWORDS = []
 for title in confs['link_parsing']['titles']:
     for prof in confs['link_parsing']['profs']:
         KEYWORDS.append((title + ' ' + prof).strip().replace(' ', '%20'))
+PAGE_NUM = confs['link_parsing']['page_num']
 
 
 def get_time(base: int) -> int:
@@ -56,7 +57,7 @@ def log_in() -> None:
         return None
     except:
         driver.get("https://linkedin.com/uas/login")
-        time.sleep(get_time(15))
+        time.sleep(30)
         username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
         username.send_keys(USER_LOGIN)
         time.sleep(get_time(5))
@@ -64,7 +65,7 @@ def log_in() -> None:
         pword.send_keys(USER_PASSWORD)
         time.sleep(get_time(5))
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
-        time.sleep(get_time(5))
+        time.sleep(120)
 
 
 def csv_write(data: list, path: str, header=None) -> None:
@@ -97,7 +98,7 @@ def scroll_page() -> None:
 
 
 # noinspection PyBroadException
-def parse_links(page_num: int = 1, path: str = Path(r'..\data\raw\data_frame.csv'), keywords=None) -> None:
+def parse_links(page_num: int = PAGE_NUM, path: str = Path(r'..\data\01_raw\data_frame.csv'), keywords=None) -> None:
     """
     Search for keywords, navigate through pages and save links to path file.
     """
@@ -107,7 +108,7 @@ def parse_links(page_num: int = 1, path: str = Path(r'..\data\raw\data_frame.csv
         driver.get(
             'https://www.linkedin.com/search/results/people/?keywords='
             + keyword
-            + '=GLOBAL_SEARCH_HEADER&sid=QDs'
+            + '=GLOBAL_SEARCH_HEADER&page=21&sid=QDs'
         )
         for _ in tqdm(range(page_num), desc='Pages: '):
             search_result_links = driver.find_elements(By.CSS_SELECTOR, "div.entity-result__item a.app-aware-link")
@@ -131,5 +132,5 @@ def parse_links(page_num: int = 1, path: str = Path(r'..\data\raw\data_frame.csv
 if __name__ == '__main__':
     session_init()
     log_in()
-    parse_links(page_num=19)
-    input()
+    parse_links()
+    input('Press Enter to exit parser.')
