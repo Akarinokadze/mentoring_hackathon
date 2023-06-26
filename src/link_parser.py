@@ -98,7 +98,7 @@ def scroll_page() -> None:
 
 
 # noinspection PyBroadException
-def parse_links(page_num: int = PAGE_NUM, path: str = Path(r'..\data\01_raw\data_frame.csv'), keywords=None) -> None:
+def parse_links(page_num: int = PAGE_NUM, path: str = Path(r'../data/01_raw/raw_links.csv'), keywords=None) -> None:
     """
     Search for keywords, navigate through pages and save links to path file.
     """
