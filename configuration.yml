@@ -8,3 +8,6 @@ link_parsing:
 ]
     init_page: 1 #int, > 0
     page_pass: 1 #int, > 0
+post_parsing:
+    limit_low: 0 #int, > 0
+    limit_high: 50 #int, > 0

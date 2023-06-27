@@ -16,6 +16,8 @@ creds = yaml.safe_load(Path(r'../credentials.yml').read_text())
 USER_LOGIN = creds['user']['USER_LOGIN']
 USER_PASSWORD = creds['user']['USER_PASSWORD']
 confs = yaml.safe_load(Path(r'../configuration.yml').read_text())
+LIMIT_LOW = confs['post_parsing']['limit_low']
+LIMIT_HIGH = confs['post_parsing']['limit_high']
 POSTS_URL_SUFFIX = '/recent-activity/all/'
 
 
@@ -109,15 +111,16 @@ def parse_posts(driver, profile_url: str) -> dict:
 
 def parse(driver,
           path_from: str = Path(r'../data/02_intermediate/clean_links.csv'),
-          path_to: str = Path(r'../data/01_raw/raw_posts.csv')) -> None:
+          path_to: str = Path(r'../data/01_raw/raw_posts.csv'),
+          limit_low: int = LIMIT_LOW, limit_high: int = LIMIT_HIGH) -> None:
     """
     Get information parsed from personal page, from posts and save it to file.
     """
-    df = pd.read_csv(path_from).sample(25)
+    df = pd.read_csv(path_from)
     header = ['account_link', 'search_keywords',
               'name', 'title', 'works_at', 'intro', 'experience', 'place',
               'posts_cnt', 'post_text', 'reaction_cnt', 'comments_cnt', 'repost_cnt']
-    for row in tqdm(df.iterrows(), desc='Pages passed: '):
+    for row in tqdm(df[limit_low:limit_high].iterrows(), desc='Pages passed: '):
         personal_info = parse_personal_page(driver, row[1]['account_link'])
         time.sleep(get_time(5))
         posts_info = parse_posts(driver, row[1]['account_link'])
