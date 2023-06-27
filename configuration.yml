@@ -4,6 +4,7 @@ link_parsing:
     'data analyst', 'web developer', 'QA engineer', 'test engineer', 'devops'
 ]
     titles: [
-    'lead', 'senior', 'middle'
+    '', 'lead', 'senior', 'middle'
 ]
-    page_num: 19
+    init_page: 1 #int, > 0
+    page_pass: 1 #int, > 0

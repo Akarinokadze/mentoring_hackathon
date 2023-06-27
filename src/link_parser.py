@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -15,24 +17,24 @@ from tqdm import tqdm
 creds = yaml.safe_load(Path(r'../credentials.yml').read_text())
 USER_LOGIN = creds['user']['USER_LOGIN']
 USER_PASSWORD = creds['user']['USER_PASSWORD']
-SCROLL_PAUSE_TIME = 0.5
 confs = yaml.safe_load(Path(r'../configuration.yml').read_text())
 KEYWORDS = []
 for title in confs['link_parsing']['titles']:
     for prof in confs['link_parsing']['profs']:
         KEYWORDS.append((title + ' ' + prof).strip().replace(' ', '%20'))
-PAGE_NUM = confs['link_parsing']['page_num']
+PAGE_PASS = confs['link_parsing']['page_pass']
+INIT_PAGE = confs['link_parsing']['init_page']
 
 
-def get_time(base: int) -> int:
+def get_time(base: int | float) -> int | float:
     """
-    Returns randomized time shift, sometimes multiply shift by base.
+    Returns randomized time shift, sometimes multiply shift by base to increase dispersion.
     """
     factor = random.randint(1, 20)
     if factor == 1:
         result = base + base * random.randint(1, 10)
     else:
-        result = base + random.randint(1, 10)
+        result = base + base * random.random() * 2
     return result
 
 
@@ -90,7 +92,7 @@ def scroll_page() -> None:
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(SCROLL_PAUSE_TIME)
+        time.sleep(get_time(0.5))
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
@@ -98,19 +100,23 @@ def scroll_page() -> None:
 
 
 # noinspection PyBroadException
-def parse_links(page_num: int = PAGE_NUM, path: str = Path(r'../data/01_raw/raw_links.csv'), keywords=None) -> None:
+def parse_links(init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
+                path: str = Path(r'../data/01_raw/raw_links.csv'), keywords=None) -> None:
     """
     Search for keywords, navigate through pages and save links to path file.
     """
     if keywords is None:
         keywords = KEYWORDS
-    for keyword in tqdm(keywords, desc='Keywords: '):
+    for keyword in tqdm(keywords, desc='Keywords passed: '):
+        if init_page > 1:
+            page_url = ''
+        else:
+            page_url = '&page=' + str(init_page)
         driver.get(
-            'https://www.linkedin.com/search/results/people/?keywords='
-            + keyword
-            + '=GLOBAL_SEARCH_HEADER&page=21&sid=QDs'
+            'https://www.linkedin.com/search/results/people/?keywords={0}=GLOBAL_SEARCH_HEADER{1}&sid=QDs'.format(
+                keyword, page_url)
         )
-        for _ in tqdm(range(page_num), desc='Pages: '):
+        for _ in tqdm(range(page_pass), desc='Pages passed: '):
             search_result_links = driver.find_elements(By.CSS_SELECTOR, "div.entity-result__item a.app-aware-link")
             for link in search_result_links:
                 href = link.get_attribute("href")
@@ -133,4 +139,4 @@ if __name__ == '__main__':
     session_init()
     log_in()
     parse_links()
-    input('Press Enter to exit parser.')
+    input('Enter anything to exit parser.')
