@@ -19,7 +19,7 @@ confs = yaml.safe_load(Path(r'../configuration.yml').read_text())
 POSTS_URL_SUFFIX = '/recent-activity/all/'
 
 
-def scroll_page_gradually() -> None:
+def scroll_page_gradually(driver) -> None:
     """
     Scroll down gradually to make sure whole page is loaded and returns to "Show more" button.
     """
@@ -35,14 +35,13 @@ def scroll_page_gradually() -> None:
             last_height = new_height
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight - 1500);")
         time.sleep(get_time(1))
-        next_button = driver.find_element(By.CLASS_NAME, 'scaffold-finite-scroll__load-button')
-        if next_button is None:
+        try:
+            driver.find_element(By.CLASS_NAME, 'scaffold-finite-scroll__load-button').click()
+        except:
             return
-        else:
-            next_button.click()
 
 
-def parse_personal_page(profile_url: str) -> list:
+def parse_personal_page(driver, profile_url: str) -> list:
     """
     Parse for personal page info and return it.
     """
@@ -50,25 +49,35 @@ def parse_personal_page(profile_url: str) -> list:
     time.sleep(get_time(5))
     src = driver.page_source
     soup = BeautifulSoup(src, "lxml")
-    name = soup.find('div', {'class': 'pv-text-details__left-panel'}).find("h1").get_text().strip()
-    title = soup.find('div', {'class': 'pv-text-details__left-panel'}).find("div", {'class': 'text-body-medium'})\
-        .get_text().strip()
-    works_at = soup.find('button', {'class': 'pv-text-details__right-panel-item-link'}).get_text().strip()
-    intro = soup.find('div', {'class': 'pv-shared-text-with-see-more'}).get_text().strip()
-    experience = (datetime.date.today().year
-                  - int(min(re.findall('\d{4}', soup.find('ul', {'class': 'pvs-list'}).get_text()))))
-    place = soup.find('span', {'class': 'text-body-small inline t-black--light break-words'}).get_text().strip()
+    name = soup.find('div', {'class': 'pv-text-details__left-panel'}).find("h1")
+    if name is not None:
+        name = name.get_text().strip()
+    title = soup.find('div', {'class': 'pv-text-details__left-panel'}).find("div", {'class': 'text-body-medium'})
+    if title is not None:
+        title = title.get_text().strip()
+    works_at = soup.find('button', {'class': 'pv-text-details__right-panel-item-link'})
+    if works_at is not None:
+        works_at = works_at.get_text().strip()
+    intro = soup.find('div', {'class': 'pv-shared-text-with-see-more'})
+    if intro is not None:
+        intro = intro.get_text().strip()
+    experience = soup.select('div#experience')[0].find_next('ul')
+    if experience is not None:
+        experience = datetime.date.today().year - int(min(re.findall('\d{4}', experience.get_text())))
+    place = soup.find('span', {'class': 'text-body-small inline t-black--light break-words'})
+    if place is not None:
+        place = place.get_text().strip()
     personal_info = [name, title, works_at, intro, experience, place]
     return personal_info
 
 
-def parse_posts(profile_url: str) -> dict:
+def parse_posts(driver, profile_url: str) -> dict:
     """
     Parse profile posts page for post's text, reactions, reposts and comments.
     """
     driver.get(profile_url + POSTS_URL_SUFFIX)
     time.sleep(get_time(5))
-    scroll_page_gradually()
+    scroll_page_gradually(driver)
     time.sleep(get_time(5))
     src = driver.page_source
     soup = BeautifulSoup(src, 'lxml')
@@ -93,29 +102,35 @@ def parse_posts(profile_url: str) -> dict:
             repost_cnt = int(max(re.findall('\d', repost_cnt.get_text().strip())))
         posts_info[counter] = [post_text, reaction_cnt, comments_cnt, repost_cnt]
         counter += 1
+    if len(posts_info) == 0:
+        posts_info[0] = [None, None, None, None]
     return posts_info
 
 
-def parse(path_from: str = Path(r'../data/02_intermediate/clean_links.csv'),
+def parse(driver,
+          path_from: str = Path(r'../data/02_intermediate/clean_links.csv'),
           path_to: str = Path(r'../data/01_raw/raw_posts.csv')) -> None:
     """
     Get information parsed from personal page, from posts and save it to file.
     """
-    df = pd.read_csv(path_from)
+    df = pd.read_csv(path_from).sample(25)
     header = ['account_link', 'search_keywords',
-              'posts_cnt', 'name', 'title', 'works_at', 'intro', 'experience', 'place',
-              'post_text', 'reaction_cnt', 'comments_cnt', 'repost_cnt']
-    for row in tqdm(df[:5].iterrows(), desc='Pages passed: '):
-        personal_info = parse_personal_page(row[1]['account_link'])
-        posts_info = parse_posts(row[1]['account_link'])
+              'name', 'title', 'works_at', 'intro', 'experience', 'place',
+              'posts_cnt', 'post_text', 'reaction_cnt', 'comments_cnt', 'repost_cnt']
+    for row in tqdm(df.iterrows(), desc='Pages passed: '):
+        personal_info = parse_personal_page(driver, row[1]['account_link'])
+        time.sleep(get_time(5))
+        posts_info = parse_posts(driver, row[1]['account_link'])
         posts_cnt = len(posts_info)
+        if posts_cnt == 1 and (posts_info[0][0] == posts_info[0][1] == posts_info[0][2] == posts_info[0][3] is None):
+            posts_cnt = 0
         for post in posts_info:
-            data = [row[1]['account_link'], row[1]['search_keywords'], posts_cnt] + personal_info + posts_info[post]
+            data = [row[1]['account_link'], row[1]['search_keywords']] + personal_info + [posts_cnt] + posts_info[post]
             csv_write(data, path_to, header)
 
 
 if __name__ == '__main__':
-    session_init()
-    log_in()
-    parse()
+    chr_driver = session_init()
+    log_in(chr_driver)
+    parse(chr_driver)
     input('Enter anything to exit parser.')

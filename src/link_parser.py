@@ -38,19 +38,17 @@ def get_time(base: int | float) -> int | float:
     return result
 
 
-def session_init() -> None:
+def session_init():
     """
     Initialize session.
     """
     caps = DesiredCapabilities().CHROME
     caps['pageLoadStrategy'] = 'eager'
-    # noinspection PyGlobalUndefined
-    global driver
     driver = webdriver.Chrome()
+    return driver
 
 
-# noinspection PyBroadException
-def log_in() -> None:
+def log_in(driver) -> None:
     """
     Login in.
     """
@@ -67,7 +65,7 @@ def log_in() -> None:
         pword.send_keys(USER_PASSWORD)
         time.sleep(get_time(5))
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
-        time.sleep(120)
+        time.sleep(60)
 
 
 def csv_write(data: list, path: str, header=None) -> None:
@@ -85,7 +83,7 @@ def csv_write(data: list, path: str, header=None) -> None:
         writer.writerow(data)
 
 
-def scroll_page() -> None:
+def scroll_page(driver) -> None:
     """
     Scroll down till end of the page to make sure there is "Next" button.
     """
@@ -100,7 +98,7 @@ def scroll_page() -> None:
 
 
 # noinspection PyBroadException
-def parse_links(init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
+def parse_links(driver, init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
                 path: str = Path(r'../data/01_raw/raw_links.csv'), keywords=None) -> None:
     """
     Search for keywords, navigate through pages and save links to path file.
@@ -123,7 +121,7 @@ def parse_links(init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
                 if 'linkedin.com/in' in href:
                     string = [href[:href.rfind('?miniProfileUrn')], keyword.replace('%20', ' ')]
                     csv_write(string, path)
-            scroll_page()
+            scroll_page(driver)
             try:
                 next_button = WebDriverWait(driver, timeout=30).until(
                     lambda d: d.find_element(By.CLASS_NAME, 'artdeco-pagination__button--next')
@@ -136,7 +134,7 @@ def parse_links(init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
 
 
 if __name__ == '__main__':
-    session_init()
-    log_in()
-    parse_links()
+    chr_driver = session_init()
+    log_in(chr_driver)
+    parse_links(chr_driver)
     input('Enter anything to exit parser.')
