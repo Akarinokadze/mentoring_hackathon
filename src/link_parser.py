@@ -57,7 +57,7 @@ def log_in(driver) -> None:
         return None
     except:
         driver.get("https://linkedin.com/uas/login")
-        time.sleep(30)
+        time.sleep(15)
         username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
         username.send_keys(USER_LOGIN)
         time.sleep(get_time(5))

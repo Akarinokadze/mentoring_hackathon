@@ -1,4 +1,9 @@
 .ipynb_checkpoints
-credentials.yml
 .idea
+
+credentials.yml
+
 src/__pycache__
+
+data/*
+!data/.gitkeep

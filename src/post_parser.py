@@ -7,6 +7,7 @@ import time
 import re
 import datetime
 import yaml
+import random
 
 from pathlib import Path
 from tqdm import tqdm
@@ -19,6 +20,9 @@ confs = yaml.safe_load(Path(r'../configuration.yml').read_text())
 LIMIT_LOW = confs['post_parsing']['limit_low']
 LIMIT_HIGH = confs['post_parsing']['limit_high']
 POSTS_URL_SUFFIX = '/recent-activity/all/'
+RANDOM_URLS = ['https://www.linkedin.com/feed/', 'https://www.linkedin.com/mynetwork/',
+               'https://www.linkedin.com/jobs/', 'https://www.linkedin.com/messaging/thread/new/',
+               'https://www.linkedin.com/notifications/?filter=all', 'https://www.linkedin.com/post/new/']
 
 
 def scroll_page_gradually(driver) -> None:
@@ -63,7 +67,10 @@ def parse_personal_page(driver, profile_url: str) -> list:
     intro = soup.find('div', {'class': 'pv-shared-text-with-see-more'})
     if intro is not None:
         intro = intro.get_text().strip()
-    experience = soup.select('div#experience')[0].find_next('ul')
+    try:
+        experience = soup.select('div#experience')[0].find_next('ul')
+    except:
+        experience = None
     if experience is not None:
         experience = datetime.date.today().year - int(min(re.findall('\d{4}', experience.get_text())))
     place = soup.find('span', {'class': 'text-body-small inline t-black--light break-words'})
@@ -130,6 +137,11 @@ def parse(driver,
         for post in posts_info:
             data = [row[1]['account_link'], row[1]['search_keywords']] + personal_info + [posts_cnt] + posts_info[post]
             csv_write(data, path_to, header)
+        factor = random.randint(1, 5)
+        if factor == 1:
+            url_index = random.randint(0, len(RANDOM_URLS) - 1)
+            driver.get(RANDOM_URLS[url_index])
+            time.sleep(get_time(5))
 
 
 if __name__ == '__main__':
