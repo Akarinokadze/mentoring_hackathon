@@ -24,6 +24,7 @@ for title in confs['link_parsing']['titles']:
         KEYWORDS.append((title + ' ' + prof).strip().replace(' ', '%20'))
 PAGE_PASS = confs['link_parsing']['page_pass']
 INIT_PAGE = confs['link_parsing']['init_page']
+TIME_BASE = confs['link_parsing']['time_base']
 
 
 def get_time(base: int | float) -> int | float:
@@ -60,10 +61,10 @@ def log_in(driver) -> None:
         time.sleep(15)
         username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
         username.send_keys(USER_LOGIN)
-        time.sleep(get_time(5))
+        time.sleep(get_time(TIME_BASE))
         pword = driver.find_element(By.ID, "password")
         pword.send_keys(USER_PASSWORD)
-        time.sleep(get_time(5))
+        time.sleep(get_time(TIME_BASE))
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
         time.sleep(60)
 
@@ -90,7 +91,7 @@ def scroll_page(driver) -> None:
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(get_time(0.5))
+        time.sleep(get_time(TIME_BASE / 10))
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
             break
@@ -127,7 +128,7 @@ def parse_links(driver, init_page: int = INIT_PAGE, page_pass: int = PAGE_PASS,
                     lambda d: d.find_element(By.CLASS_NAME, 'artdeco-pagination__button--next')
                 )
                 next_button.click()
-                time.sleep(get_time(5))
+                time.sleep(get_time(TIME_BASE))
             except:
                 break
     driver.quit()
