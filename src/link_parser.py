@@ -53,12 +53,13 @@ def log_in(driver) -> None:
     """
     Login in.
     """
+    input('Enter anything to start login process.')
     try:
         driver.find_element(By.CLASS_NAME, 'global-nav__me-photo')
         return None
     except:
         driver.get("https://linkedin.com/uas/login")
-        time.sleep(15)
+        time.sleep(get_time(TIME_BASE))
         username = WebDriverWait(driver, timeout=30).until(lambda d: d.find_element(By.ID, "username"))
         username.send_keys(USER_LOGIN)
         time.sleep(get_time(TIME_BASE))
@@ -66,7 +67,7 @@ def log_in(driver) -> None:
         pword.send_keys(USER_PASSWORD)
         time.sleep(get_time(TIME_BASE))
         driver.find_element(By.XPATH, "//button[@type='submit']").click()
-        time.sleep(60)
+        input('Enter anything to start parsing.')
 
 
 def csv_write(data: list, path: str, header=None) -> None:

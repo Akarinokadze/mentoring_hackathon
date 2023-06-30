@@ -10,6 +10,6 @@ link_parsing:
     page_pass: 1 #int, > 0
     time_base: 5
 post_parsing:
-    limit_low: 3427 #int, >= 0
-    limit_high: 3500 #int, > 0
-    time_base: 2
+    limit_low: 2600 #int, >= 0
+    limit_high: 2650 #int, > 0
+    time_base: 4
