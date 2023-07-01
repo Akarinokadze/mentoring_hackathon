@@ -1,5 +1,13 @@
 beautifulsoup4==4.12.2
 selenium==4.10.0
-yaml==0.2.5
 pyyaml==6.0
 tqdm==4.65.0
+matplotlib==3.3.4
+nltk==3.6.1
+numpy==1.25.0
+pandas==1.2.4
+regex==2023.6.3
+scikit-learn==0.24.1
+scipy==1.11.1
+torch==1.10.0
+keras==2.7.0
