@@ -5,14 +5,5 @@ credentials.yml
 
 src/__pycache__
 
-data/**
-!data/01_raw/raw_links.csv
-!data/01_raw/raw_posts.csv
-!data/02_intermediate/clean_links.csv
-!data/02_intermediate/clean_posts.csv
-!data/02_intermediate/share_posts.csv
+#data/**
 !.gitkeep
-
-notebooks/experiments.ipynb
-notebooks/link_parsing.ipynb
-notebooks/post_parsing.ipynb
